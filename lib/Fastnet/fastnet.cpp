@@ -204,6 +204,26 @@ uint8_t Fastnet::raw(const uint8_t * data, uint8_t len) {
   return write();
 }
 
+// Send received data as an arbitrary command.
+// First byte is the command to send, remaining bytes are
+// the command payload.
+uint8_t Fastnet::command(const uint8_t * data, uint8_t len) {
+  _buf[0] = BROADCAST;
+  _buf[1] = WIND_CPU;
+  _buf[2] = len;
+  _buf[3] = data[0];
+  _buf[4] = checksum(_buf, 4);
+  _len = 5;
+
+  if(len) {
+    memcpy(_buf + 5, data + 1, len);
+    _buf[5 + len] = checksum(_buf + 5, len);
+    _len = len + 6;
+  }
+
+  return write();
+}
+
 uint8_t Fastnet::backlight(uint8_t level) {
   _buf[0] = BROADCAST;
   _buf[1] = _addr;

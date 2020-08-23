@@ -20,5 +20,8 @@
 #include "Arduino.h"
 
 void repl(uint8_t * data, void(* sender)(uint8_t *, int));
+void cmd(uint8_t * data, void(* sender)(uint8_t *, int));
 bool in_repl();
+bool in_cmd();
 void start_repl();
+void start_cmd();

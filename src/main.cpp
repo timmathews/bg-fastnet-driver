@@ -182,6 +182,8 @@ void loop() {
 
   if(in_repl()) {
     repl(data, [](uint8_t * d, int l) { fastnet->raw(d, l); });
+  } else if(in_cmd()) {
+    cmd(data, [](uint8_t *d, int l) { fastnet->command(d, l); });
   } else {
     menu.run(0);
   }

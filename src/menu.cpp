@@ -63,6 +63,7 @@ const SerialMenuEntry menu0[] = {
   { item7, true, 'P', pause },
   { item8, true, 'U', resume },
   { item9, true, 'D', start_repl },
+  { itemA, true, 'C', start_cmd },
   { item1, true, 'R', []() { menu.show(); }},
 };
 constexpr uint8_t menu0Size = GET_MENU_SIZE(menu0);

@@ -88,6 +88,7 @@ class Fastnet {
     uint8_t config_page(uint16_t channel, uint8_t node, char * label, char * units);
     uint8_t store_page();
     uint8_t raw(const uint8_t * data, uint8_t len);
+    uint8_t command(const uint8_t * data, uint8_t len);
     uint8_t checksum(uint8_t * data, uint8_t len);
     void pause();
     void resume();

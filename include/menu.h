@@ -29,6 +29,7 @@ const char PROGMEM item6[] = "Backlight High";
 const char PROGMEM item7[] = "Pause";
 const char PROGMEM item8[] = "Resume";
 const char PROGMEM item9[] = "Send Raw Data";
+const char PROGMEM itemA[] = "Send Raw Command";
 
 const char PROGMEM item10[] = "Previous Device";
 const char PROGMEM item11[] = "Next Device";
