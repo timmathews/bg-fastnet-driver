@@ -52,7 +52,7 @@ bool in_cmd() {
 }
 
 void start_repl() {
-  Serial.println(F("Enter the bytes youw want to send."));
+  Serial.println(F("Enter the bytes you want to send."));
   Serial.println(F("To send the word OFF, try 0600BEE8E8"));
   Serial.println(F("To return to the menu, enter X"));
   Serial.print("> ");
