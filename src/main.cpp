@@ -180,10 +180,10 @@ void loop() {
   static int16_t awa = 0;
   static uint16_t aws = 0;
 
-  if(in_repl()) {
-    repl(data, [](uint8_t * d, int l) { fastnet->raw(d, l); });
+  if(in_data()) {
+    repl(data, [](uint8_t * d, int l) { fastnet->raw(d, l); }, [](){ menu.show(); });
   } else if(in_cmd()) {
-    cmd(data, [](uint8_t *d, int l) { fastnet->command(d, l); });
+    repl(data, [](uint8_t *d, int l) { fastnet->command(d, l); }, [](){ menu.show(); });
   } else {
     menu.run(0);
   }

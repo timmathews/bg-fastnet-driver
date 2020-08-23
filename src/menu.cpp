@@ -62,7 +62,7 @@ const SerialMenuEntry menu0[] = {
   { item6, true, 'H', backlight_high },
   { item7, true, 'P', pause },
   { item8, true, 'U', resume },
-  { item9, true, 'D', start_repl },
+  { item9, true, 'D', start_data },
   { itemA, true, 'C', start_cmd },
   { item1, true, 'R', []() { menu.show(); }},
 };

@@ -18,9 +18,10 @@
 
 #include "repl.h"
 
+enum mode_t { DATA, CMD, NONE };
+
 String _buf;
-bool _repl;
-bool _cmd;
+mode_t _mode = NONE;
 
 char ctoh(char c) {
   if(c >= '0' && c <= '9') return c - '0';
@@ -43,21 +44,34 @@ int to_bytes(uint8_t * buf) {
   return i;
 }
 
-bool in_repl() {
-  return _repl;
+void print_payload(uint8_t * data, int l) {
+    Serial.print("P:");
+
+    for(int i = 0; i < l; i++) {
+      Serial.print(' ');
+      if(data[i] < 0x10)
+        Serial.print('0');
+      Serial.print(data[i], HEX);
+    }
+
+    Serial.println();
+}
+
+bool in_data() {
+  return _mode == DATA;
 }
 
 bool in_cmd() {
-  return _cmd;
+  return _mode == CMD;
 }
 
-void start_repl() {
+void start_data() {
   Serial.println(F("Enter the bytes you want to send."));
   Serial.println(F("To send the word OFF, try 0600BEE8E8"));
   Serial.println(F("To return to the menu, enter X"));
   Serial.print("> ");
 
-  _repl = true;
+  _mode = DATA;
 }
 
 void start_cmd() {
@@ -68,12 +82,10 @@ void start_cmd() {
   Serial.println(F("To send an low boat speed alarm, try E2 01 41"));
   Serial.print("> ");
 
-  _cmd = true;
+  _mode = CMD;
 }
 
-void repl(uint8_t * data, void (* sender)(uint8_t *, int)) {
-  _repl = true;
-
+void repl(uint8_t * data, void (* sender)(uint8_t *, int), void(* on_exit)()) {
   if(!Serial.available()) return;
 
   char rx = Serial.read();
@@ -82,63 +94,15 @@ void repl(uint8_t * data, void (* sender)(uint8_t *, int)) {
   if(rx == '\n') {
     if (_buf[0] == 'X' || _buf[0] == 'x') {
       _buf = "";
-      _repl = false;
+      _mode = NONE;
+      on_exit();
       return;
     }
 
     int l = to_bytes(data);
-
-    Serial.print("P:");
-    for(int i = 0; i < l; i++) {
-      Serial.print(' ');
-      if(data[i] < 0x10)
-        Serial.print('0');
-      Serial.print(data[i], HEX);
-    }
-    Serial.println();
-
+    print_payload(data, l);
     sender(data, l);
-
     Serial.print("\n> ");
-
-    _buf = "";
-  } else if(rx == 0x08 || rx == 0x7F) {
-    _buf.remove(_buf.length() - 1);
-  } else if(rx > 0x1F && rx < 0x7F) {
-    _buf += rx;
-  }
-}
-
-void cmd(uint8_t * data, void (* sender)(uint8_t *, int)) {
-  _cmd = true;
-
-  if(!Serial.available()) return;
-
-  char rx = Serial.read();
-  Serial.print(rx);
-
-  if(rx == '\n') {
-    if (_buf[0] == 'X' || _buf[0] == 'x') {
-      _buf = "";
-      _cmd = false;
-      return;
-    }
-
-    int l = to_bytes(data);
-
-    Serial.print("P:");
-    for(int i = 0; i < l; i++) {
-      Serial.print(' ');
-      if(data[i] < 0x10)
-        Serial.print('0');
-      Serial.print(data[i], HEX);
-    }
-    Serial.println();
-
-    sender(data, l);
-
-    Serial.print("\n> ");
-
     _buf = "";
   } else if(rx == 0x08 || rx == 0x7F) {
     _buf.remove(_buf.length() - 1);

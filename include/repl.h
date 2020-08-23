@@ -19,9 +19,8 @@
 #pragma once
 #include "Arduino.h"
 
-void repl(uint8_t * data, void(* sender)(uint8_t *, int));
-void cmd(uint8_t * data, void(* sender)(uint8_t *, int));
-bool in_repl();
+void repl(uint8_t * data, void(* sender)(uint8_t *, int), void(* on_exit)());
+bool in_data();
 bool in_cmd();
-void start_repl();
+void start_data();
 void start_cmd();
