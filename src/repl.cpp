@@ -22,6 +22,38 @@ enum mode_t { DATA, CMD, NONE };
 
 String _buf;
 mode_t _mode = NONE;
+uint8_t h = 0;
+uint8_t m = 0;
+uint8_t s = 0;
+uint8_t x = 0x80;
+bool repeat;
+
+int send_time(uint8_t * buf) {
+  buf[0] = 0x05;
+  buf[1] = x;
+  buf[2] = 0;//x & 0xFF;
+  buf[3] = h;
+  buf[4] = m;
+  buf[5] = s;
+
+  x += 0x01;
+  s++;
+  m++;
+
+  if(s == 60) {
+    s = 0;
+  }
+
+  if(m == 60) {
+    m = 0;
+    h++;
+  }
+
+  if(h == 100)
+    h = 0;
+
+  return 6;
+}
 
 char ctoh(char c) {
   if(c >= '0' && c <= '9') return c - '0';
