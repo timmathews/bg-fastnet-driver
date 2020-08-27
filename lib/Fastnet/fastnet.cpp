@@ -208,8 +208,9 @@ uint8_t Fastnet::raw(const uint8_t * data, uint8_t len) {
 // First byte is the command to send, remaining bytes are
 // the command payload.
 uint8_t Fastnet::command(const uint8_t * data, uint8_t len) {
+  len--;
   _buf[0] = BROADCAST;
-  _buf[1] = WIND_CPU;
+  _buf[1] = _addr;
   _buf[2] = len;
   _buf[3] = data[0];
   _buf[4] = checksum(_buf, 4);
