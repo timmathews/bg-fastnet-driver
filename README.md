@@ -76,7 +76,42 @@ The payload of the send data command is fairly complex. Bytes 1 to nn can
 repeat to send multiple values. Sometimes the format byte and value bytes
 overlap.
 
+### `02h` - Channel Label
+
+   01   |  02  | 03 - 12
+--------|------|---------
+Channel | Node | Label
+
+Channel is the channel to label, e.g. `1eh`, Sea Temp °F. Node is sending
+node for the chosen channel. This byte is optional. If it's not there, then
+the default node is chosen. If it is supplied, you may not see a change on
+the display as the alternate source is probably not configured in the
+display device.
+
+The label is ASCII. Valid characters are numbers (0-9), uppercase letters
+(A-Z) and the symbols dash (-), solidus (/), period (.), comma (,) and
+percent (%). Period is represented as the bottom left segment of the LCD
+character, comma is the middle right segment of the LCD character. Percent
+is interpreted as degree (°). It's questionable whether period and comma are
+actually valid characters or just an accident.
+
+FFDs respond to this immediately, but 20/20 displays do not respond until
+they receive data on the channel.
+
+### `03h` - Send ASCII Text
+
+This command is for sending ASCII text on the bus. As far as I know, the only
+use for this is to send latitude and longitude on channel `47h`. See section
+below for the format of the string.
+
+### `C8h` - Power Off
+
+This command will power off the whole system. It takes no payload.
+
 ### `C9h` - Set Backlight
+
+The FFDs will send the following for backlight values. However, the displays
+will respond to any level between `00h` and `07h`.`
 
 01 | 02
 ----|-------
@@ -133,7 +168,7 @@ The FFD and 20/20 displays are very flexible regarding data displayed.
 Display mode is configured with a one or two byte bitmask. Not all possible
 configurations make sense.
 
-### First byte 
+### First byte
 
 Most significant bits (7,6):
 - `00` - divide by 1
@@ -323,13 +358,14 @@ right of the colon (minutes or seconds).
 This is not completely deciphered and invalid values can lead to the display
 crashing, requiring a power cycle.
 
+- `8000h` corrupt units
 - `0800h` will cause an overflow, requiring a reset.
 - `0500h` ibid.
 - `0400h` ibid.
-- `0300h` replace display with 0000
-- `fc00h` display "FR" in units.
+- `0300h` replace display with 0000, often crashes display
+- `fc00h` display "RE" in units.
 - `0200h` display "FR" in units.
-- `0100h` remove "FR" from units.
+- `0100h` clears units.
 
 
 
@@ -437,3 +473,276 @@ devices, sending to `FAh` will reset just the 20/20 displays, and sending to
 `40h` will reset just the 20/20 display at that address.
 
 It has no payload.
+
+# 08. Sending Latitude and Longitude
+
+The lat/lon channel is `47h` and is sent with the command `03h`. It has a 16
+byte payload that is interpreted as an ASCII string. The first byte doesn't
+seem to do anything. The next six bytes are latitude in the format `DDMM.MM`.
+Where `DD` is 0 to 90 degrees and `MM.MM` is fractional minutes. The next
+byte is a cardinal direction, either `N` or `S`. The next seven bytes are
+longitude in the format `DDDMM.MM`. Where `DDD` is 0 to 180 degrees and
+`MM.MM` is fractional minutes. The last byte is a cardinal direction, either
+`E` or `W`.
+
+I have not been able to determine how to get the FFD to display anything
+other than degrees, so it's not very useful. Position accuracy of 60nm is
+... not great.
+
+```
+CmChSqLaLaD0D1D2D3CdLoLoLoD0D1D2D3Cd
+0347003132000000004e3132330000000045 12N 123E
+0347003132313435344e3132333231343745 12 14.54N 123 21.47E
+0347803132313435344e3132333231343745 12 14.54N 123 21.47E
+```
+
+# 09. Configuring Data Senders
+
+The factory defaults for FFD and 20/20 displays are listed below.
+
+## Hydra Display
+
+Page     | Channel | Source | Label
+---------|---------|--------|-------
+1 Top    |  `41h`  |  `01h` | BOAT SPD KT
+1 Bottom |  `C1h`  |  `01h` | DEPTH    M
+2 Top    |  `41h`  |  `01h` | BOAT SPD KT
+2 Bottom |  `CFh`  |  `01h` | TRIP LOG NM
+3 Top    |  `41h`  |  `01h` | BOAT SPD KT
+3 Bottom |  `CDh`  |  `01h` | STD LOG  NM
+4 Top    |  `41h`  |  `01h` | BOAT SPD KT
+4 Bottom |  `1Eh`  |  `01h` | SEA TEMP °F
+
+## Hydra 330 Display
+
+Page     | Channel | Source | Label
+---------|---------|--------|-------
+1 Top    |  `41h`  |  `01h` | BOAT SPD KT
+1 Bottom |  `75h`  |  `05h` | TIMER    MS
+2 Top    |  `41h`  |  `01h` | AVG SPD  KT
+2 Bottom |  `CFh`  |  `01h` | TRIP LOG NM
+3 Top    |  `81h`  |  `01h` | D/R DIST NM
+3 Bottom |  `D3h`  |  `01h` | D/R CRSE °M
+4 Top    |  `CDh`  |  `01h` | STD LOG  NM
+4 Bottom |  `1Eh`  |  `01h` | SEA TEMP °F
+
+## 20/20 Display
+
+Page | Channel | Source | Label
+-----|---------|--------|-------------
+   1 |  `41h`  |  `01h` | BOAT SPD KT
+   2 |  `C1h`  |  `01h` | DEPTH    M
+   3 |  `C2h`  |  `01h` | DEPTH    FT
+   4 |  `4Dh`  |  `05h` | APP W/S  KT
+   5 |  `51h`  |  `05h` | APP W/A  °
+   6 |  `55h`  |  `05h` | TRUE W/S KT
+   7 |  `59h`  |  `05h` | TRUE W/A °
+   8 |  `6dh`  |  `05h` | TRUE DIR °
+   9 |  `7Fh`  |  `05h` |   VMG    KT
+  10 |  `49h`  |  `05h` | HEADING  °M
+  11 |  `75h`  |  `05h` | TIMER    MS
+  12 |  `E4h`  |  `09h` | BTW RMB  °M
+  13 |  `EAh`  |  `09h` | CRSE O/G °M
+  14 |  `EBh`  |  `09h` | SPD O/G  KT
+
+For reasons unknown, some channels are selectable even if no CPU has
+declared themselves as a source. Other channels are not until something
+claims them. The following is a menu structure extracted from an FFD ROM
+image. Different versions of the ROM have a different menu.
+
+Each line starts with 3 bytes. The first is an index. The second is unknown,
+but is likely a function pointer. The third (at least in the case of entries
+related to channels) is the channel ID. Menu entries 02 - 0C, 12, and 13
+have another byte after the label. This is the address of the default
+sender. The menu items marked with an asterisk are available on the Hydra
+330 FFD without a processor connected. The menu items with a second asterisk
+are available on the Hydra FFD without a processor connected.
+
+```
+- 01 F1 01 CONTROL
+  - 01 91 14 FREEZE
+  - 02 83 15 RESET
+  - 03 91 16 RUN
+  - 04 91 17 START  0
+  - 05 91 18 START  5
+  - 06 91 19 START 10
+  - 07 91 1A START 15
+  - 08 91 1B RUN
+  - 09 91 1C FREEZE
+  - 0A 87 30 PERIOD
+  - 0B 83 2F RESET
+  - 0C 87 31 LEG BEAR
+  - 0D 87 32 TIDE ON
+  - 0E 87 1D SET
+  - 0F 91 1E START
+  - 10 91 1F STOP
+  - 11 91 20 SYNC
+- 02 01 02 SPEED
+  - 01 00 41 BOAT SPDKT 01 * *
+  - 02 00 64 AVG SPD KT 01 *
+  - 03 00 7F   VMG   KT 05 *
+- 03 01 03 LOG
+  - 01 00 CD STD LOG NM 01 *
+  - 02 00 CF TRIP LOGNM 01 *
+- 04 01 04 DEPTH
+  - 01 00 C1 DEPTH   M  01 * *
+  - 02 00 C2 DEPTH   FT 01
+  - 03 00 C3 DEPTH   FM 01
+- 05 01 05 NAVIGATE
+  - 01 00 49 HEADING %M 05 *
+  - 02 00 29 OFF CRSE%  30
+  - 03 00 D3 D/R CRSE%M 01 *
+  - 04 00 81 D/R DISTNM 01 *
+  - 05 00 69 COURSE  %M 05
+  - 06 00 82 LEEWAY  %  05
+  - 07 00 84 TIDE SET%M 09
+  - 08 00 83 TIDE RTEKT 09
+- 06 01 06 WIND
+  - 01 00 4D APP W/S KT 05 *
+  - 02 00 55 TRUE W/SKT 05 *
+  - 03 00 51 APP W/A %  05 *
+  - 04 00 59 TRUE W/A%  05 *
+  - 05 00 6D TRUE DIR%M 05 *
+  - 06 00 27 LIFT/HDR%  30
+  - 07 00 6F N/L AWA %  09
+  - 08 00 71 N/L AWS KT 09
+  - 09 00 85 UPWASH     05
+  - 0A 00 4F APP W/S MS 05
+  - 0B 00 56 TRUE W/SMS 05
+- 07 01 07 PERFORM
+  - 01 00 32 TACKING    09
+  - 02 00 33 REACHINGPC 09
+  - 03 00 35 OPT W/A %  09
+  - 04 00 E2 LAYLINE NM 09
+  - 05 00 34 HEEL %     05
+  - 06 00 7D TARG SPDKT 09
+  - 07 00 9A OPP TACK%M 05
+  - 08 00 9B  TRIM   %  05
+  - 09 00 9C MAST ANG%  05
+  - 0A 00 9D W/A MAST%  05
+- 08 01 08 WAYPOINT
+  - 01 00 E0 BRG W-W %T 09
+  - 02 00 E1 BRG W-W %M 09
+  - 03 00 E3 BTW RMB %T 09
+  - 04 00 E4 BTW RMB %M 09
+  - 05 00 E5 BTW GC  %T 09
+  - 06 00 E6 BTW GC  %M 09 *
+  - 07 00 E7 DTW RMB NM 09
+  - 08 00 E8 DTW GC  NM 09 *
+  - 09 00 E9 CRSE O/G%T 09
+  - 0A 00 EA CRSE O/G%M 09 *
+  - 0B 00 EB SPD O/G KT 09 *
+  - 0C 00 EC VMG WPT KT 09
+  - 0D 00 ED TTG WPT MS 09
+  - 0E 00 EE CROSS TRNM 09
+  - 0F 00 BB LATITUDE
+  - 10 00 BC LONGTUDE
+- 09 01 09 MOTOR
+  - 01 00 8D VOLTS    V 05
+- 0A 01 0A TEMP
+  - 01 00 1F SEA TEMP%C 01
+  - 02 00 1E SEA TEMP%F 01 * *
+  - 03 00 1D AIR TEMP%C 05
+  - 04 00 1C AIR TEMP%F 05
+- 0B 01 0B TIME
+  - 01 00 75 TIMER   MS 05 *
+- 0C 01 0C MISC
+  - 01 00 0B RUDDER  %  05
+  - 02 00 38 LINEAR 1   05
+  - 03 00 39 LINEAR 2   05
+  - 04 00 3A LINEAR 3   05
+  - 05 00 3B LINEAR 4   05
+  - 06 00 87 BAROMETRMB 05
+  - 07 00 86 PR TRENDMB 05
+  - 08 A3 3A SOURCE  NR
+- 0D 41 0D LIGHTING
+  - 01 97 5B LOCAL         * *
+  - 02 97 5C SYSTEM        * *
+  - 03 97 5D RED           *
+  - 04 97 5E GREEN         *
+- 0E F9 0E ALARMS
+  - 01 DB 22 ALL OFF
+  - 02 93 23 SECTOR
+  - 03 93 24 SECT ON
+  - 04 93 25 SECT OFF
+  - 05 93 26 HI ALARM
+  - 06 93 27 HI ON
+  - 07 93 28 HI OFF
+  - 08 93 29 LO ALARM
+  - 09 93 2A LO ON
+  - 0A 93 2B LO OFF
+- 0F FF 0F CNFG DSP
+  - 01 81 3D PAGE          * *
+  - 02 A1 3C NAV MODEGC
+  - 03 A1 3B NAV MODERH
+  - 04 93 38 SHOW ALM
+  - 05 B5 3E REMOTE        * *
+- 10 C5 10 DAMPING
+  - 01 85 9A DAMPING SE
+  - 02 87 51 DYN DAMP
+- 11 F7 11 CALBRATE
+  - 01 8D 53 AUTO CAL
+  - 02 8B 54 MANL CAL
+  - 03 8F 55 REF  CAL
+  - 04 A7 5F USE SOG
+  - 05 A9 60 CORRECTN
+  - 06 89 56 CAL DISTNM
+  - 07 89 57 STRT RUN
+  - 08 89 58 STOP RUN
+  - 09 89 59 END CAL
+  - 0A 89 5A NEW CAL HZ
+  - 0B 87 40 SINGLE  HZ
+  - 0C 87 41 PORT CALHZ
+  - 0D 87 42 STBD CALHZ
+  - 0E B3 61 TACK CRN
+  - 0F 87 62 BSPD TBL
+  - 10 87 66 FILTER  PC
+  - 11 87 63 SET TACK
+  - 12 87 64 SET HEEL%
+  - 13 87 65 OFFSET  PC
+  - 14 87 43 OFFSET  KT
+  - 15 87 44 DATUM
+  - 16 87 45 MHU ANGL%
+  - 17 87 52 HEEL CRN
+  - 18 87 46 MHU CAL HZ
+  - 19 87 47 MHU OFFSKT
+  - 1A 87 48 CAL VAL1
+  - 1B 87 49 CAL VAL2
+  - 1C 87 4A CAL VAL3
+  - 1D 87 4B CAL VAL4
+  - 1E 87 4F CORRECTN
+- 12 01 12 PARAMTR
+  - 01 00 36 GAIN    DB 01
+  - 02 00 37 NOISE   DB 01
+- 13 01 13 EXTERNAL
+  - 01 00 EF REMOTE 0   09
+  - 02 00 F0 REMOTE 1   09
+  - 03 00 F1 REMOTE 2   09
+  - 04 00 F2 REMOTE 3   09
+  - 05 00 F3 REMOTE 4   09
+  - 06 00 F4 REMOTE 5   09
+  - 07 00 F5 REMOTE 6   09
+  - 08 00 F6 REMOTE 7   09
+  - 09 00 F7 REMOTE 8   09
+  - 0A 00 F8 REMOTE 9   09
+```
+
+In order for more of these menu items to be available, a processor must claim them as data it will provide. The `FCh` command will do this.
+
+`FC` `ssccxxyyccxxyyccxxyy`
+
+SS is a sequence ID.
+
+CC is a channel ID.
+
+XXYY is unknown at this point, but 0000 seems to work fine.
+
+You can send as many CCXXYY groups in a single message as you want. Or at
+least up to 84, since any more than that would make the packet too long.
+
+### MISC
+
+- FFD menu CAL VAL1 sends command `CFh` with `0138h`.
+- FFD menu CAL VAL2 sends command `D0h` with `0238h`.
+- FFD menu CAL VAL3 sends command `D1h` with `0338h`.
+- FFD menu DAMPING sends command `CDh` with `0538h`.
