@@ -111,7 +111,7 @@ This command will power off the whole system. It takes no payload.
 ### `C9h` - Set Backlight
 
 The FFDs will send the following for backlight values. However, the displays
-will respond to any level between `00h` and `07h`.`
+will respond to any level between `00h` and `07h`.
 
 01 | 02
 ----|-------
@@ -124,6 +124,24 @@ Possible light level values are:
 - `4` - High
 
 The second byte is always `20h`.
+
+### `E7h` - Turn Off Alarm
+
+`E7h` will disable the low alarm for the referenced channel.
+
+01 | 02
+---|----
+Sequence ID | Alarming Channel
+
+### `E8h` - Alarm Toggle
+
+`E8h` will enable the low alarm for the referenced channel. While the alarm is
+enabled, FFDs will alternate their background color between green and red each
+time a frame containing the channel is recived.
+
+01 | 02
+---|----
+Sequence ID | Alarming Channel
 
 ### `F6h` - Change Page
 
